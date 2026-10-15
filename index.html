@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Noto's Customizable PGA DFS Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Inter:wght@400;500;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    --green-900:#0a3326; --green-800:#0d4533; --green-700:#116149; --green-600:#1a7f5e; --gold:#ffc83d; --coral:#ff6b57; --mint:#7df0b4;
+    --page:#eef2f0; --shell:#ffffff; --text:#17201c; --muted:#6a766f; --border:#dfe6e2;
+    --head-bg:#0d4533; --head2-bg:#14573f; --head-fg:#ffffff; --head-sub:#bfe6d4;
+    --wrow-bg:#e3f1ea; --wrow-fg:#0d4533;
+    --row-a:#ffffff; --row-b:#f4f8f6; --detail:#f1f6f3;
+    --input-bg:#ffffff; --card:#ffffff;
+  }
+  body.dark {
+    --page:#0c1411; --shell:#131d19; --text:#e6efe9; --muted:#93a39a; --border:#25352e;
+    --head-bg:#0a2c20; --head2-bg:#103a2b; --head-fg:#f0faf5; --head-sub:#9fd3bb;
+    --wrow-bg:#183a2d; --wrow-fg:#bff0d8;
+    --row-a:#131d19; --row-b:#17231e; --detail:#101916;
+    --input-bg:#1a2823; --card:#17231e;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:var(--font); margin:0; background:var(--page); color:var(--text); font-size:12px; font-variant-numeric:tabular-nums; padding:8px; }
+  .shell { border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--shell); box-shadow:0 6px 24px rgba(10,51,38,.12); }
+
+  /* ----- banner ----- */
+  .banner { position:relative; background:radial-gradient(1200px 300px at 85% -40%, rgba(255,200,61,.25), transparent 60%), linear-gradient(135deg,var(--green-900) 0%,var(--green-700) 60%,var(--green-600) 100%); color:#fff; padding:18px 22px 16px; display:flex; flex-wrap:wrap; align-items:center; gap:14px; }
+  .banner::after { content:""; position:absolute; left:0; right:0; bottom:0; height:4px; background:linear-gradient(90deg,var(--gold),var(--coral),var(--gold)); }
+  .titles { flex:1 1 320px; min-width:0; }
+  .t1 { font-family:"Bowlby One","Arial Black",Impact,sans-serif; font-size:clamp(22px,4.4vw,40px); line-height:1.05; letter-spacing:.4px; background:linear-gradient(90deg,#fff3b0 0%,#ffc83d 55%,#ffffff 100%); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 0 rgba(0,0,0,.28)); }
+  .t2 { font-family:"Pacifico","Brush Script MT",cursive; font-size:clamp(18px,3.2vw,30px); line-height:1.25; margin-top:4px; color:var(--mint); text-shadow:0 2px 0 rgba(0,0,0,.25); overflow-wrap:anywhere; }
+  .updated { font-size:11px; opacity:.75; margin-top:4px; }
+  .bannerbtns { display:flex; gap:8px; align-items:center; }
+  button, select, input { font-family:inherit; font-size:inherit; }
+  .btn { padding:7px 13px; border:1px solid var(--border); border-radius:8px; background:var(--card); font-size:12px; font-weight:600; cursor:pointer; color:var(--text); }
+  .btn:hover { filter:brightness(.96); }
+  .banner .btn { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.28); color:#fff; }
+  .btn.gold { background:var(--gold); border-color:var(--gold); color:#2a2100; font-weight:800; }
+  .banner .btn.gold { background:var(--gold); color:#2a2100; }
+  .btn.gold:hover { filter:brightness(1.06); }
+
+  /* ----- tabs ----- */
+  .tabs { display:flex; gap:4px; padding:10px 14px 0; background:var(--shell); border-bottom:1px solid var(--border); }
+  .tab { padding:9px 16px; border:0; background:transparent; font-weight:700; font-size:13px; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; border-radius:8px 8px 0 0; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--green-700); border-bottom-color:var(--gold); }
+  body.dark .tab.active { color:var(--mint); }
+
+  /* ----- toolbar ----- */
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px; background:var(--shell); border-bottom:1px solid var(--border); }
+  .toolbar input[type=text], .toolbar select, .toolbar input[type=number] { padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; background:var(--input-bg); color:var(--text); }
+  .toolbar input[type=number] { width:64px; padding:7px 6px; }
+  .toolbar label { font-size:10.5px; font-weight:800; color:var(--green-700); text-transform:uppercase; letter-spacing:.5px; }
+  body.dark .toolbar label { color:var(--mint); }
+  .toolbar .grow { flex:1 1 160px; min-width:120px; }
+  .hidden { display:none !important; }
+
+  /* ----- weights ----- */
+  .wpanel { display:none; padding:14px; background:var(--detail); border-bottom:1px solid var(--border); max-height:440px; overflow-y:auto; }
+  .wpanel.open { display:block; }
+  .wtop { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px; }
+  .wtop .note { font-size:11px; color:var(--muted); font-style:italic; }
+  .wtotal { font-weight:800; color:var(--green-700); }
+  body.dark .wtotal { color:var(--mint); }
+  .wgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; }
+  .wcard { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 12px 8px; border-top:3px solid var(--gc,var(--green-600)); }
+  .wcard h4 { margin:0 0 6px; font-size:12px; color:var(--text); display:flex; justify-content:space-between; gap:6px; }
+  .wcard h4 span { color:var(--muted); font-weight:700; }
+  .wrow { display:grid; grid-template-columns:132px 1fr 46px; align-items:center; gap:8px; padding:2px 0; }
+  .wrow .lab { font-size:11px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wrow input[type=range] { width:100%; accent-color:var(--green-700); }
+  .wrow .val { text-align:right; font-weight:800; font-size:11px; }
+  .spanel { display:none; position:absolute; z-index:30; top:36px; left:0; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px; box-shadow:0 8px 24px rgba(0,0,0,.18); min-width:240px; max-height:340px; overflow-y:auto; }
+  .spanel.open { display:block; }
+  .spanel label { display:block; font-size:12px; padding:3px 0; cursor:pointer; text-transform:none; letter-spacing:0; font-weight:500; color:var(--text); }
+  .spanel .acts { display:flex; gap:6px; margin-bottom:6px; }
+
+  /* ----- tables ----- */
+  .table-wrap { overflow:auto; max-height:72vh; position:relative; }
+  table { border-collapse:separate; border-spacing:0; width:100%; font-size:12px; }
+  thead th { position:sticky; z-index:5; background:var(--head-bg); color:var(--head-fg); padding:4px 5px; text-align:center; cursor:pointer; user-select:none; font-weight:800; font-size:11px; letter-spacing:.2px; line-height:1.15; vertical-align:middle; min-width:62px; }
+  thead tr.r1 th { top:0; height:34px; }
+  thead tr.r1 th.fx { height:62px; border-top:3px solid var(--gold); }
+  thead tr.r1 th.gh { border-top:3px solid var(--gc,var(--gold)); font-size:11.5px; cursor:default; border-left:2px solid rgba(255,255,255,.2); }
+  thead tr.r2 th { top:34px; height:28px; background:var(--head2-bg); font-size:10px; font-weight:700; color:var(--head-sub); }
+  thead tr.r2 th:hover, thead tr.r1 th.fx:hover { filter:brightness(1.2); }
+  thead tr.wr th { top:62px; height:24px; background:var(--wrow-bg); color:var(--wrow-fg); font-size:10.5px; font-weight:800; cursor:default; padding:3px 4px; border-bottom:2px solid var(--gold); }
+  thead tr.wr th.wl { text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:.6px; padding-left:10px; }
+  thead tr.wr th .zero { opacity:.35; font-weight:600; }
+  thead tr th.sticky1, thead tr th.sticky2 { z-index:9; }
+  thead th.left { text-align:left; padding-left:10px; }
+  .gs { border-left:2px solid var(--border); }
+  thead tr.r2 th.gs { border-left:2px solid rgba(255,255,255,.2); }
+  thead tr.wr th.gs { border-left:2px solid rgba(13,69,51,.25); }
+  .arrow { font-size:9px; color:var(--gold); margin-left:3px; }
+  tbody td { padding:6px 5px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; background:var(--rowbg); height:32px; }
+  tbody tr.g { --rowbg:var(--row-a); cursor:pointer; }
+  tbody tr.g.alt { --rowbg:var(--row-b); }
+  tbody tr.g:hover td { filter:brightness(.95); }
+  body.dark tbody tr.g:hover td { filter:brightness(1.18); }
+  .sticky1 { position:sticky; left:0; z-index:3; width:40px; min-width:40px; max-width:40px; }
+  .sticky2 { position:sticky; left:40px; z-index:3; min-width:168px; text-align:left; box-shadow:3px 0 5px -3px rgba(10,51,38,.35); }
+  tbody td.name { text-align:left; font-weight:700; padding-left:10px; }
+  tbody td.idx { color:var(--muted); font-weight:700; }
+  tbody td.rate { font-weight:800; font-size:13px; }
+  tbody td.fp { font-weight:800; }
+  tbody td.na { color:var(--muted); background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(120,140,130,.12) 5px 6px); }
+  tbody td.dim { color:var(--muted); }
+  tbody tr.wd td { opacity:.42; }
+  .tag { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:800; background:#8a948e; color:#fff; vertical-align:1px; }
+  input.adj { width:54px; padding:4px 4px; border:1px solid var(--border); border-radius:6px; text-align:center; font-weight:700; background:var(--input-bg); color:var(--text); }
+  input.adj:focus { outline:2px solid var(--gold); border-color:var(--gold); }
+  input.adj.on { border-color:var(--green-600); background:rgba(26,127,94,.14); }
+  input.adj.neg { border-color:#c4412f; background:rgba(196,65,47,.12); }
+  input.adj::placeholder { color:var(--muted); opacity:.7; }
+  tr.detail td { padding:12px 16px; background:var(--detail); text-align:left; white-space:normal; height:auto; }
+  .dgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px 16px; }
+  .dgrid .it { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; }
+  .dgrid .chip { min-width:40px; text-align:center; padding:2px 7px; border-radius:6px; font-weight:800; }
+  .dgrid .gh { grid-column:1/-1; font-weight:800; color:var(--green-700); text-transform:uppercase; font-size:10px; letter-spacing:.6px; margin-top:6px; }
+  body.dark .dgrid .gh { color:var(--mint); }
+  .footer { font-size:11.5px; color:var(--muted); padding:10px 16px 12px; line-height:1.5; }
+  .warn { display:none; margin:8px 14px 0; padding:8px 12px; border-radius:8px; background:#fff4d6; border:1px solid #f0d58a; color:#6b4e00; font-size:12px; }
+  .fail { padding:36px 20px; text-align:center; color:var(--muted); font-size:13px; white-space:normal !important; }
+  .sim-note { padding:8px 16px 0; font-size:11.5px; color:var(--muted); }
+  #simTable thead th { height:auto; }
+  #simTable thead tr.r1 th { height:30px; }
+  #simTable thead tr.r2 th { top:30px; height:34px; }
+  #simTable thead th.mk { font-size:12px; font-weight:800; letter-spacing:.3px; }
+  .doc { padding:18px 22px 24px; max-width:900px; line-height:1.6; font-size:13px; }
+  .doc h2 { font-family:"Bowlby One","Arial Black",sans-serif; font-weight:400; font-size:22px; margin:0 0 6px; color:var(--green-700); }
+  body.dark .doc h2 { color:var(--mint); }
+  .doc h3 { font-size:14px; margin:20px 0 4px; color:var(--text); border-left:4px solid var(--gold); padding-left:9px; }
+  .doc p, .doc li { color:var(--text); } .doc ul, .doc ol { margin:4px 0 4px; padding-left:22px; }
+  .doc .tip { background:var(--detail); border:1px solid var(--border); border-radius:10px; padding:9px 13px; margin:10px 0; }
+  .doc dl { margin:6px 0 0; } .doc dt { font-weight:800; margin-top:11px; color:var(--green-700); } body.dark .doc dt { color:var(--mint); }
+  .doc dd { margin:1px 0 0 0; }
+  .doc kbd { background:var(--detail); border:1px solid var(--border); border-radius:5px; padding:0 6px; font-size:11.5px; }
+  .doc .gl { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:0 28px; }
+  #diffMode { padding:3px 6px; border:1px solid var(--border); border-radius:6px; background:var(--input-bg); color:var(--text); font-size:11.5px; margin-left:6px; }
+  @media (max-width:640px) { .wrow { grid-template-columns:104px 1fr 44px; } body { padding:4px; } .banner { padding:14px 14px 12px; } .wgrid { grid-template-columns:1fr; } .sticky2 { min-width:132px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="banner">
+    <div class="titles">
+      <div class="t1">⛳ Noto's Customizable PGA DFS Model</div>
+      <div class="t2" id="eventName">Loading…</div>
+      <div class="updated" id="updated"></div>
+    </div>
+    <div class="bannerbtns">
+      <button class="btn" id="themeBtn" title="Toggle dark mode">🌙</button>
+      <button class="btn gold" id="exportBtn">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tabModel" data-tab="model">Model</button>
+    <button class="tab" id="tabSim" data-tab="sim">Simulations</button>
+    <button class="tab" id="tabInstr" data-tab="instr">Instructions</button>
+    <button class="tab" id="tabGloss" data-tab="gloss">Glossary</button>
+  </div>
+  <div class="toolbar" id="toolbar">
+    <input type="text" id="search" class="grow" placeholder="Search golfer...">
+    <span class="modelOnly" style="display:contents">
+      <button class="btn" id="wBtn">⚙ Weights</button>
+      <span style="position:relative;"><button class="btn" id="stBtn">Stats ▾</button><div class="spanel" id="spanel"></div></span>
+      <label for="scaleSel">fpts</label>
+      <select id="scaleSel">
+        <option value="rating">Rating as-is</option>
+        <option value="scaled">Scaled to points range</option>
+      </select>
+      <span id="scaleBox" style="display:none;align-items:center;gap:6px;">
+        <label>Floor</label><input type="number" id="floor" step="0.5">
+        <label>Top</label><input type="number" id="ceil" step="0.5">
+      </span>
+      <button class="btn hidden" id="clearAdj">Clear ADJ</button>
+    </span>
+  </div>
+  <div class="wpanel" id="wpanel">
+    <div class="wtop">
+      <button class="btn" id="resetBtn">Reset to default weights</button>
+      <span class="wtotal" id="wtotal"></span>
+      <span class="note">Weights are scaled to add up to 100%, so only the balance between stats matters.</span>
+    </div>
+    <div class="wgrid" id="wgrid"></div>
+  </div>
+  <div class="warn" id="warn"></div>
+
+  <div id="modelView">
+    <div class="table-wrap" id="tableWrap">
+      <table id="modelTable">
+        <thead id="modelHead"></thead>
+        <tbody id="bodyRows"></tbody>
+      </table>
+    </div>
+    <div class="footer">Click a golfer to see the rank behind each stat. Ratings come from each stat's z-score within the field, weighted by the settings above (average golfer = 50). <b>ADJ</b> boosts (or cuts) a golfer's rating and projection by that percent: 10 = +10%, -5 = -5%. Hatched cells have no data for that stat: they are estimated from the odds, except Course History, where no history counts as slightly below average.</div>
+  </div>
+
+  <div id="simView" class="hidden">
+    <div class="sim-note">Our simulated probabilities next to the sportsbook odds. <b>Diff</b> compares the two: teal means our simulations like the golfer more than the market does, orange means less. Show Diff as <select id="diffMode"><option value="pct">% difference (Sim % vs Book %)</option><option value="pts">percentage points</option></select></div>
+    <div class="table-wrap">
+      <table id="simTable">
+        <thead id="simHead"></thead>
+        <tbody id="simRows"></tbody>
+      </table>
+    </div>
+    <div class="footer">% difference is Sim % divided by Book %, minus 1 (for example 10% Sim vs 8% Book = +25%). Book % is the raw implied probability from the odds, so it includes the sportsbook's margin. Across a full field the book probabilities add up to more than 100%, which pushes Diff slightly negative on average.</div>
+  </div>
+
+  <div id="instrView" class="doc hidden">
+    <h2>How to use the model</h2>
+    <p>The model rates every golfer in the field by combining dozens of stats. You decide how much each stat matters. The ratings, projections (fpts) and salary-value columns update the moment you change anything.</p>
+
+    <h3>1. Start with the default weights</h3>
+    <p>The page opens with Noto's default weights. The <b>Weight %</b> row under the column headers shows how much each stat counts toward a golfer's rating. A dash means the stat isn't used by default. Click any golfer to see the rank behind each of their stats.</p>
+
+    <h3>2. Set your own weights</h3>
+    <ol>
+      <li>Click <b>⚙ Weights</b> to open the sliders. Every stat has one, including stats that aren't in the default model.</li>
+      <li>Drag a slider up to make that stat matter more, or to zero to ignore it. Weights are scaled to add up to 100%, so only the balance between stats matters.</li>
+      <li>Watch the Rating, fpts and Weight % row change as you go. The sliders for a stat group show that group's total share.</li>
+      <li>Click <b>Reset to default weights</b> any time to go back to Noto's weights.</li>
+    </ol>
+    <div class="tip">Your weights and ADJ entries are saved in this browser, so they will still be here when you come back to the same slate.</div>
+
+    <h3>3. Add manual adjustments (ADJ)</h3>
+    <p>Have a read the stats can't capture, like an injury note, a course fit or a hot practice round? Type a percent into the <b>ADJ</b> box for that golfer. <kbd>10</kbd> raises their rating and projection by 10%. <kbd>-5</kbd> lowers them by 5%. Press Enter or click away to apply. <b>Clear ADJ</b> removes all of them.</p>
+
+    <h3>4. Choose how projections are calculated</h3>
+    <p>Use the <b>fpts</b> menu next to the search box. <b>Rating as-is</b> uses the rating itself as the projection. <b>Scaled to points range</b> stretches the ratings onto a fantasy-point range you set with the Floor (lowest projection) and Top (best projection) boxes. Either way, a higher number means a higher projection.</p>
+
+    <h3>5. Explore the table</h3>
+    <ul>
+      <li>Click a column header to sort. Click it again to reverse the order.</li>
+      <li>Type in the search box to find a golfer.</li>
+      <li>Use <b>Stats ▾</b> to hide or show whole stat groups.</li>
+      <li>Colors run from orange (worst in the field) to teal (best) for ranks, ratings and value.</li>
+      <li>Golfer and rank stay in place as you scroll right. The Weight % row's label does too.</li>
+    </ul>
+
+    <h3>6. Export your projections</h3>
+    <ol>
+      <li>Set your weights and adjustments the way you want them.</li>
+      <li>Click <b>⬇ Export CSV</b> at the top right. A file named <kbd>golf_&lt;event&gt;.csv</kbd> downloads.</li>
+      <li>The file has three columns, <kbd>rg_id</kbd>, <kbd>name</kbd> and <kbd>fpts</kbd>, sorted from the highest projection to the lowest. Golfers who have withdrawn are exported with 0.</li>
+      <li>Upload that CSV to the RotoGrinders lineup builder as your projections.</li>
+    </ol>
+    <div class="tip">The export uses whatever the table shows right now: your weights, your ADJ entries and your fpts setting.</div>
+
+    <h3>The Simulations tab</h3>
+    <p>This tab shows the probabilities from Noto's simulations next to the sportsbook odds for each market (Win, Top 10, Top 20). <b>Diff</b> shows where the simulations disagree with the market. Teal means the simulations like the golfer more than the books do, which can point to value. You can show Diff as a percent difference or as percentage points. This tab doesn't change when you move the weights.</p>
+
+    <h3>Good to know</h3>
+    <ul>
+      <li>If a golfer has no data for a stat (for example a golfer new to the PGA Tour), the model estimates that stat from their sportsbook odds and the simulations. Those cells show a hatched dash.</li>
+      <li>A golfer with no history at this course counts as slightly below average for Course History.</li>
+      <li>A golfer marked WD has withdrawn. They get a rating and projection of 0 and are sorted to the bottom.</li>
+    </ul>
+  </div>
+
+  <div id="glossView" class="doc hidden">
+    <h2>Glossary</h2>
+    <p>Every stat is shown as a rank among the golfers in this week's field: <b>1 is the best</b>. The three columns under most stats are time windows: the last 3, 6 and 18 months.</p>
+
+    <h3>Table columns</h3>
+    <div class="gl"><dl>
+      <dt>Rating</dt><dd>The model's overall score for a golfer. It blends all the stats using your weights, and an average golfer is about 50.</dd>
+      <dt>ADJ</dt><dd>Your manual adjustment, in percent. It raises or lowers a golfer's rating and projection.</dd>
+      <dt>fpts</dt><dd>The projection: fantasy points based on the rating (see the fpts setting). This is what the CSV export uses.</dd>
+      <dt>DK Sal / FD Sal</dt><dd>DraftKings and FanDuel salaries.</dd>
+      <dt>DK pOWN / FD pOWN</dt><dd>Projected ownership: the share of lineups expected to use the golfer.</dd>
+      <dt>DK / $ and FD / $</dt><dd>Value: rating per $1,000 of salary. Higher means more rating for the price.</dd>
+      <dt>Weight %</dt><dd>The share of a rating that comes from each stat with the current weights.</dd>
+      <dt>WD</dt><dd>Withdrawn from the event.</dd>
+    </dl></div>
+
+    <h3>Stats</h3>
+    <div class="gl"><dl>
+      <dt>Strokes Gained: Off-the-Tee</dt><dd>Strokes gained from tee shots compared with the field average.</dd>
+      <dt>Good Drive %</dt><dd>The share of drives that finish in a good position.</dd>
+      <dt>Driving Distance</dt><dd>Average length of drives.</dd>
+      <dt>Driving Accuracy</dt><dd>The share of drives that finish in the fairway.</dd>
+      <dt>Strokes Gained: Approach</dt><dd>Strokes gained on approach shots into the green.</dd>
+      <dt>Weighted Strokes Gained: Approach</dt><dd>A weighted version of approach strokes gained built for this model. It is left out of the table when there isn't data for it.</dd>
+      <dt>Strokes Gained: Around-the-Green</dt><dd>Strokes gained on short-game shots near the green, such as chips and bunker shots.</dd>
+      <dt>Strokes Gained: Putting</dt><dd>Strokes gained on the greens. The Grass Type column uses only rounds on the same kind of grass as this week's greens.</dd>
+      <dt>Expected Hole Performance</dt><dd>How a golfer scores on holes compared with what is expected for those holes.</dd>
+      <dt>Birdie or Better %</dt><dd>The share of holes played in a birdie or better.</dd>
+      <dt>Bogey Avoidance</dt><dd>How well a golfer avoids bogeys or worse. Higher is better.</dd>
+      <dt>Course History</dt><dd>A 0 to 100 rating of how the golfer has played at this course. No history counts as slightly below average.</dd>
+      <dt>Comps (Similar Courses)</dt><dd>Ratings of a golfer's results at courses similar in style to this week's. They only show when the model uses them for the event.</dd>
+      <dt>Cut %</dt><dd>The share of events where the golfer made the cut.</dd>
+      <dt>Top 25%, Top 10%, Top 5%</dt><dd>The share of events where the golfer finished in the top 25, top 10 or top 5.</dd>
+      <dt>Form and Field Strength</dt><dd>Form is a golfer's strokes gained per round over the last 3, 8 and 18 months. Field Strength is a 0 to 100 measure of how strong the fields the golfer has played in were. A higher number means tougher recent fields.</dd>
+    </dl></div>
+
+    <h3>Terms</h3>
+    <div class="gl"><dl>
+      <dt>Strokes gained (SG)</dt><dd>How many strokes better or worse than the field average a golfer is in one part of the game.</dd>
+      <dt>L3 / L6 / L18 Months</dt><dd>The last 3, 6 or 18 months of results.</dd>
+      <dt>Rank</dt><dd>Where a golfer stands among this week's field for a stat. 1 is best.</dd>
+      <dt>Z-score</dt><dd>How far above or below the field average a golfer is for a stat, in standard deviations. The model blends z-scores, not raw numbers, so stats on different scales can be combined.</dd>
+      <dt>Estimated from odds</dt><dd>When a golfer has no data for a stat, the model fills it in from their simulated and sportsbook probabilities. Those cells show a hatched dash.</dd>
+      <dt>Sim %</dt><dd>The probability from Noto's simulations that a golfer reaches that result (win, top 10, top 20).</dd>
+      <dt>Book odds / Book %</dt><dd>The sportsbook odds, and the probability they imply. Book % includes the sportsbook's margin.</dd>
+      <dt>Diff</dt><dd>Sim % compared with Book %. Teal means the simulations like the golfer more than the market does.</dd>
+      <dt>Scaled to points range</dt><dd>An fpts option that stretches ratings onto the Floor to Top range you set.</dd>
+    </dl></div>
+  </div>
+
+</div>
+
+<script>
+// ---------- colors ----------
+const HEAT={
+  classic:[[0,[178,24,43]],[1/6,[239,138,98]],[2/6,[253,219,199]],[3/6,[247,247,247]],[4/6,[209,229,240]],[5/6,[103,169,207]],[1,[33,102,172]]],
+  teal:[[0,[190,92,14]],[1/6,[232,146,66]],[2/6,[248,212,168]],[3/6,[249,248,242]],[4/6,[190,226,216]],[5/6,[88,168,156]],[1,[14,112,108]]],
+  soft:[[0,[200,86,48]],[1/6,[230,148,98]],[2/6,[247,212,184]],[3/6,[247,247,244]],[4/6,[198,221,236]],[5/6,[116,166,199]],[1,[44,100,148]]]
+};
+const DEFAULT_HEAT="teal";
+let STOPS=HEAT[DEFAULT_HEAT];
+const lerp=(a,b,t)=>a+(b-a)*t;
+function gradientColor(p){
+  p=Math.max(0,Math.min(1,p)); let lo=STOPS[0],hi=STOPS[STOPS.length-1];
+  for(let i=0;i<STOPS.length-1;i++){ if(p>=STOPS[i][0]&&p<=STOPS[i+1][0]){lo=STOPS[i];hi=STOPS[i+1];break;} }
+  const t=(p-lo[0])/((hi[0]-lo[0])||1);
+  const r=Math.round(lerp(lo[1][0],hi[1][0],t)),g=Math.round(lerp(lo[1][1],hi[1][1],t)),b=Math.round(lerp(lo[1][2],hi[1][2],t));
+  return {bg:`rgb(${r},${g},${b})`,text:(0.299*r+0.587*g+0.114*b)>150?"#111":"#fff"};
+}
+const MK_COLORS=["#ffc83d","#5eead4","#ff9a6c","#a5b4fc","#f9a8d4","#bef264"];
+const GROUP_COLORS=["#ffc83d","#ff6b57","#7df0b4","#6cc4ff","#c79bff","#ffa94d","#5eead4","#f472b6","#a3e635","#93c5fd"];
+function percentiles(vals){
+  const idx=vals.map((v,i)=>[i,v]).filter(([,v])=>v!==null&&v!==undefined&&!isNaN(v)).sort((a,b)=>a[1]-b[1]);
+  const out=new Array(vals.length).fill(null), n=idx.length; let i=0;
+  while(i<n){ let j=i; while(j+1<n&&idx[j+1][1]===idx[i][1]) j++; const p=n>1?((i+j)/2)/(n-1):.5; for(let k=i;k<=j;k++) out[idx[k][0]]=p; i=j+1; }
+  return out;
+}
+
+// ---------- helpers ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=(v,d=1)=>(v===null||v===undefined||isNaN(v))?"—":Number(v).toFixed(d);
+const money=v=>v?("$"+Number(v).toLocaleString()):"—";
+const pct=v=>(v===null||v===undefined)?"—":(Number(v)*100).toFixed(1)+"%";
+function bookProb(o,f){
+  if(o===null||o===undefined||isNaN(o)) return null;
+  if(f==="xto1") return o>=0?1/(o+1):null;
+  if(f==="decimal") return o>=1?1/o:null;
+  if(o>=100) return 100/(o+100); if(o<=-100) return -o/(-o+100); return null;
+}
+function oddsText(o,f){
+  if(o===null||o===undefined) return "—";
+  if(f==="xto1") return "+"+Math.round(o*100);
+  if(f==="decimal") return Number(o).toFixed(2);
+  return o>0?("+"+o):String(o);
+}
+
+// ---------- column names ----------
+const GROUP_LONG={"sg: off the tee":"Strokes Gained: Off-the-Tee","sg: approach":"Strokes Gained: Approach","weighted sg: approach":"Weighted Strokes Gained: Approach","sg: around the green":"Strokes Gained: Around-the-Green","sg: putting":"Strokes Gained: Putting","comps":"Comps (Similar Courses)"};
+function groupTitle(group){ return GROUP_LONG[group.toLowerCase().trim()]||group; }
+function subLabel(st){
+  const g=st.group.toLowerCase().trim(), l=st.label;
+  if(g==="course history") return "Rating";
+  if(g==="comps") return l.replace(/\s*Rating$/i,"");
+  if(g==="cut & finish %") return l.replace(/\s*Finish$/i,"");
+  if(g==="form & field strength") return /field strength/i.test(l)?"Field Strength":l;
+  return l;
+}
+
+// ---------- state ----------
+let D=null, W=[], W0=[], sortKey="rating", sortDir=-1, simSort={key:"sim:0",dir:-1}, search="", scaleMode="rating", floorV=11, ceilV=50.5;
+let rows=[], openRows=new Set(), shownStats=new Set(), ADJ={}, tab="model", GCOL={}, KEY="";
+
+const Z_CAP=3, Z_MISSING=-3, RATE_MID=50, RATE_SPREAD=18;
+const DEBUT_Z=-0.25;   // no course history: slight penalty
+function invNorm(p){
+  const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239],
+        b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572],
+        c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783],
+        d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416];
+  const pl=0.02425; let q,r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+
+// older data files (schema 2) only had Win / Top 10 fields
+function normalize(d){
+  if(!d.markets){
+    d.markets=[{id:"win",label:"Win",fmt:"xto1"},{id:"top10",label:"Top 10",fmt:"american"}];
+    d.golfers.forEach(g=>{ g.sim=[g.winP??null,g.t10P??null]; g.book=[g.winOdds??null,g.t10Odds??null]; });
+  }
+  d.golfers.forEach(g=>{ g.sim=g.sim||[]; g.book=g.book||[]; });
+  return d;
+}
+
+// Market-implied strength: average rank across every simulated probability and sportsbook price, as a z-score.
+// Stands in for any stat a golfer has no data for (e.g. Japan Tour players with no PGA Tour rounds).
+function buildMarketZ(){
+  const n=D.golfers.length, lists=[];
+  D.markets.forEach((m,j)=>{
+    lists.push(D.golfers.map(g=>g.sim[j]??null));
+    lists.push(D.golfers.map(g=>bookProb(g.book[j],m.fmt)));
+  });
+  const ranks=lists.map(arr=>{ const o=arr.map((v,i)=>[i,v]).filter(([,v])=>v!==null&&v!==undefined).sort((a,b)=>b[1]-a[1]); const out={}; o.forEach(([i],k)=>out[i]=k+1); return out; });
+  D.golfers.forEach((g,i)=>{
+    const rs=ranks.map(m=>m[i]).filter(x=>x!==undefined);
+    if(!rs.length){ g.mz=null; return; }
+    const r=rs.reduce((a,b)=>a+b,0)/rs.length;
+    g.mz=invNorm(Math.min(0.98,Math.max(0.02,(n-r+0.5)/n)));
+  });
+}
+function missingZ(g,i){
+  if(D.stats[i].group.toLowerCase()==="course history") return DEBUT_Z;
+  return (g.mz===null||g.mz===undefined)?Z_MISSING:g.mz;
+}
+function composite(g,w,tot){
+  if(!tot) return 0;
+  let s=0; for(let i=0;i<w.length;i++){ const z=g.z[i]; s+=w[i]*(z===null||z===undefined?missingZ(g,i):Math.max(-Z_CAP,Math.min(Z_CAP,z))); }
+  return s/tot;
+}
+const gk=g=>g.rg_id||g.name;
+function compute(){
+  const tot=W.reduce((a,b)=>a+b,0);
+  rows=D.golfers.map((g,i)=>({g,i,comp:composite(g,W,tot)}));
+  const live=rows.filter(r=>!r.g.wd), n=live.length||1;
+  const mean=live.reduce((a,r)=>a+r.comp,0)/n;
+  const sd=Math.sqrt(live.reduce((a,r)=>a+(r.comp-mean)*(r.comp-mean),0)/Math.max(n-1,1));
+  rows.forEach(r=>{ r.base=r.g.wd?0:(sd>1e-9?RATE_MID+RATE_SPREAD*(r.comp-mean)/sd:RATE_MID); });
+  const mx=Math.max(...live.map(r=>r.base),0)||1;
+  rows.forEach(r=>{
+    r.adj=ADJ[gk(r.g)]||0;
+    const f=1+r.adj/100;
+    r.rating=r.g.wd?0:r.base*f;
+    const bf=scaleMode==="scaled"? floorV+(ceilV-floorV)*(r.base/mx) : r.base;
+    r.fpts=r.g.wd?0:bf*f;
+  });
+  [...live].sort((a,b)=>b.rating-a.rating).forEach((r,k)=>{ r.rank=k+1; });
+  rows.forEach(r=>{ if(r.g.wd) r.rank=null; r.dkVal=r.g.dk&&!r.g.wd?r.rating/(r.g.dk/1000):null; r.fdVal=r.g.fd&&!r.g.wd?r.rating/(r.g.fd/1000):null; });
+  const pr=percentiles(live.map(r=>r.rating)); live.forEach((r,k)=>r.pRating=pr[k]);
+  const pd=percentiles(rows.map(r=>r.dkVal)), pf=percentiles(rows.map(r=>r.fdVal));
+  rows.forEach((r,k)=>{ r.pDk=pd[k]; r.pFd=pf[k]; });
+}
+function saveW(){ try{ localStorage.setItem("rggm-w-"+(D.slug||KEY),JSON.stringify({u:D.updated,w:W})); }catch(e){} }
+function loadW(){ try{ const v=JSON.parse(localStorage.getItem("rggm-w-"+(D.slug||KEY))||"null"); if(v&&v.u===D.updated&&Array.isArray(v.w)&&v.w.length===W0.length&&v.w.every(x=>typeof x==="number"&&isFinite(x))) W=v.w.slice(); }catch(e){} }
+function saveAdj(){ try{ localStorage.setItem("rggm-adj-"+(D.slug||KEY),JSON.stringify(ADJ)); }catch(e){} }
+function loadAdj(){ try{ const v=JSON.parse(localStorage.getItem("rggm-adj-"+(D.slug||KEY))||"{}"); if(v&&typeof v==="object") ADJ=v; }catch(e){} }
+
+// ---------- model table ----------
+const FIXED=[
+  {k:"rank",l:"#",c:"sticky1"},
+  {k:"name",l:"Golfer",c:"sticky2 left"},
+  {k:"rating",l:"Rating"},
+  {k:"adj",l:"ADJ",tip:"Manual adjustment: boosts or cuts this golfer's rating and projection by this percent (10 = +10%)",nosort:true},
+  {k:"fpts",l:"fpts"},
+  {k:"dk",l:"DK Sal"},{k:"dkOwn",l:"DK pOWN"},{k:"dkVal",l:"DK / $",tip:"Rating per $1,000 of DraftKings salary"},
+  {k:"fd",l:"FD Sal"},{k:"fdOwn",l:"FD pOWN"},{k:"fdVal",l:"FD / $",tip:"Rating per $1,000 of FanDuel salary"}
+];
+function modelCols(){
+  const c=FIXED.slice(); let prev=null;
+  D.stats.forEach((st,i)=>{ if(shownStats.has(i)){ c.push({k:"st"+i,stat:i,l:subLabel(st),group:st.group,gstart:st.group!==prev,tip:st.group+" - "+st.label,gc:GCOL[st.group]}); prev=st.group; } });
+  return c;
+}
+function val(r,k){
+  if(/^st\d+$/.test(k)){ const x=r.g.r[+k.slice(2)]; return x?-x:null; }
+  if(k==="name") return r.g.name;
+  if(k==="dk"||k==="fd"||k==="dkOwn"||k==="fdOwn") return r.g[k];
+  return r[k];
+}
+function renderModelHead(cols){
+  const tot=W.reduce((a,b)=>a+b,0);
+  let r1='<tr class="r1">', r2='<tr class="r2">', r3='<tr class="wr">';
+  cols.forEach((c,n)=>{
+    const arrow=sortKey===c.k?`<span class="arrow">${sortDir===1?"▲":"▼"}</span>`:"";
+    if(c.stat===undefined){
+      r1+=`<th rowspan="2" class="fx ${c.c||""}" data-k="${c.k}" ${c.nosort?'data-ns="1" ':""}title="${esc(c.tip||c.l)}">${esc(c.l)}${arrow}</th>`;
+      r3+=c.k==="name"?`<th class="sticky2 wl">Weight %</th>`:c.k==="rank"?`<th class="sticky1"></th>`:"<th></th>";
+    } else {
+      if(c.gstart){ let cnt=0; for(let m=n;m<cols.length&&cols[m].group===c.group;m++) cnt++; r1+=`<th colspan="${cnt}" class="gh" style="--gc:${c.gc}">${esc(groupTitle(c.group))}</th>`; }
+      r2+=`<th class="${c.gstart?"gs":""}" data-k="${c.k}" title="${esc(c.tip)}">${esc(c.l)}${arrow}</th>`;
+      const w=tot?W[c.stat]/tot*100:0;
+      r3+=`<th class="${c.gstart?"gs":""}">${w>0?w.toFixed(1)+"%":'<span class="zero">–</span>'}</th>`;
+    }
+  });
+  $("modelHead").innerHTML=r1+"</tr>"+r2+"</tr>"+r3+"</tr>";
+}
+function statCell(r,c){
+  const i=c.stat, rk=r.g.r[i], st=D.stats[i], gs=c.gstart?" gs":"";
+  if(rk){ const col=gradientColor(1-(rk-1)/(D.golfers.length-1||1)); return `<td class="${gs.trim()}" style="background:${col.bg};color:${col.text}">${rk}</td>`; }
+  const course=st.group.toLowerCase()==="course history";
+  return `<td class="na${gs}" title="${course?"No course history: counted as slightly below average":"No data: estimated from the odds"}">—</td>`;
+}
+function heat(r,key,txt,cls){
+  const p=r[key];
+  if(p!==null&&p!==undefined&&!r.g.wd){ const c=gradientColor(p); return `<td class="${cls||""}" style="background:${c.bg};color:${c.text}">${txt}</td>`; }
+  return `<td class="${cls||""}">${txt}</td>`;
+}
+function modelRow(r,cols,n){
+  const g=r.g;
+  let h=`<tr class="g${n%2?" alt":""}${g.wd?" wd":""}" data-i="${r.i}">`;
+  cols.forEach(c=>{
+    switch(c.k){
+      case "rank": h+=`<td class="sticky1 idx">${r.rank===null?"—":r.rank}</td>`; break;
+      case "name": h+=`<td class="sticky2 name">${esc(g.name)}${g.wd?'<span class="tag">WD</span>':""}</td>`; break;
+      case "rating": h+=heat(r,"pRating",fmt(r.rating,1),"rate"); break;
+      case "adj": h+=`<td><input class="adj${r.adj>0?" on":r.adj<0?" neg":""}" type="number" step="1" placeholder="0" data-i="${r.i}" value="${r.adj||""}"${g.wd?" disabled":""}></td>`; break;
+      case "fpts": h+=`<td class="fp">${fmt(r.fpts,2)}</td>`; break;
+      case "dk": h+=`<td class="dim">${money(g.dk)}</td>`; break;
+      case "dkOwn": h+=`<td class="dim">${pct(g.dkOwn)}</td>`; break;
+      case "dkVal": h+=heat(r,"pDk",fmt(r.dkVal,2),"fp"); break;
+      case "fd": h+=`<td class="dim">${money(g.fd)}</td>`; break;
+      case "fdOwn": h+=`<td class="dim">${pct(g.fdOwn)}</td>`; break;
+      case "fdVal": h+=heat(r,"pFd",fmt(r.fdVal,2),"fp"); break;
+      default: h+=statCell(r,c);
+    }
+  });
+  return h+"</tr>";
+}
+function detailRow(r,ncols){
+  const tot=W.reduce((a,b)=>a+b,0)||1, nG=D.golfers.length; let last=null, html='<div class="dgrid">';
+  D.stats.forEach((s,i)=>{
+    if(s.group!==last){ html+=`<div class="gh">${esc(s.group)}</div>`; last=s.group; }
+    const rk=r.g.r[i], c=rk?gradientColor(1-(rk-1)/(nG-1||1)):{bg:"transparent",text:"var(--muted)"};
+    const course=s.group.toLowerCase()==="course history";
+    html+=`<div class="it"><span>${esc(s.label)} <span style="color:var(--muted)">(${(W[i]/tot*100).toFixed(1)}%)</span></span><span class="chip" style="background:${c.bg};color:${c.text}">${rk?rk:(course?"No history":"Est.")}</span></div>`;
+  });
+  return `<tr class="detail" data-d="${r.i}"><td colspan="${ncols}">${html}</div></td></tr>`;
+}
+function renderModel(){
+  const cols=modelCols();
+  renderModelHead(cols);
+  let list=rows.slice();
+  if(search){ const t=search.toLowerCase(); list=list.filter(r=>r.g.name.toLowerCase().includes(t)); }
+  list.sort((a,b)=>{
+    let av=val(a,sortKey), bv=val(b,sortKey);
+    if(a.g.wd!==b.g.wd) return a.g.wd?1:-1;
+    if(av===null||av===undefined) av=-Infinity; if(bv===null||bv===undefined) bv=-Infinity;
+    return (typeof av==="string"?av.localeCompare(bv):(av-bv))*sortDir;
+  });
+  let html=""; list.forEach((r,n)=>{ html+=modelRow(r,cols,n); if(openRows.has(r.i)) html+=detailRow(r,cols.length); });
+  $("bodyRows").innerHTML=html;
+  $("clearAdj").classList.toggle("hidden",!Object.keys(ADJ).length);
+}
+
+// ---------- simulations table ----------
+let diffMode="pct";
+function simVal(r,key){
+  if(key==="rating") return r.rating; if(key==="name") return r.g.name;
+  const [kind,js]=key.split(":"), j=+js, m=D.markets[j], sp=r.g.sim[j]??null, bp=bookProb(r.g.book[j],m.fmt);
+  if(kind==="sim") return sp; if(kind==="bp"||kind==="book") return bp;
+  if(kind==="diff"){ if(sp===null||bp===null) return null; return diffMode==="pct"?(bp>0?sp/bp-1:null):sp-bp; }
+  return null;
+}
+function renderSim(){
+  const M=D.markets, dl=diffMode==="pct"?"Diff %":"Diff (pts)";
+  let r1='<tr class="r1"><th rowspan="2" class="sticky1 fx">#</th><th rowspan="2" class="sticky2 left fx" data-k="name">Golfer</th><th rowspan="2" class="fx" data-k="rating">Rating</th>';
+  let r2='<tr class="r2">';
+  M.forEach((m,j)=>{
+    const mc=MK_COLORS[j%MK_COLORS.length];
+    r1+=`<th colspan="4" class="mk gs" style="background:${mc};color:#10231b;border-top:3px solid ${mc}">${esc(m.label)}</th>`;
+    [["sim:"+j,"Sim %","Our simulated probability"],["book:"+j,"Book","Sportsbook odds"],["bp:"+j,"Book %","Probability implied by the sportsbook odds"],["diff:"+j,dl,diffMode==="pct"?"Sim % divided by Book %, minus 1":"Sim % minus Book %, in percentage points"]].forEach(([k,l,t],q)=>{
+      r2+=`<th class="${q===0?"gs":""}" style="border-bottom:3px solid ${mc}" data-k="${k}" title="${t}">${l}${simSort.key===k?`<span class="arrow">${simSort.dir===1?"▲":"▼"}</span>`:""}</th>`;
+    });
+  });
+  $("simHead").innerHTML=r1+"</tr>"+r2+"</tr>";
+  document.querySelectorAll("#simHead tr.r1 th.fx[data-k]").forEach(th=>{ if(th.dataset.k===simSort.key) th.insertAdjacentHTML("beforeend",`<span class="arrow">${simSort.dir===1?"▲":"▼"}</span>`); });
+  // color scale for Diff: same orange-to-teal scale as the rest of the page, capped at the 90th percentile of |diff|
+  const cap=M.map((m,j)=>{ const a=rows.map(r=>simVal(r,"diff:"+j)).filter(v=>v!==null).map(Math.abs).sort((x,y)=>x-y); return Math.max(1e-6,a.length?a[Math.floor(0.9*(a.length-1))]:1e-6); });
+  let list=rows.slice();
+  if(search){ const t=search.toLowerCase(); list=list.filter(r=>r.g.name.toLowerCase().includes(t)); }
+  list.sort((a,b)=>{
+    let av=simVal(a,simSort.key), bv=simVal(b,simSort.key);
+    if(a.g.wd!==b.g.wd) return a.g.wd?1:-1;
+    if(av===null||av===undefined) av=-Infinity; if(bv===null||bv===undefined) bv=-Infinity;
+    return (typeof av==="string"?av.localeCompare(bv):(av-bv))*simSort.dir;
+  });
+  let html="";
+  list.forEach((r,n)=>{
+    const g=r.g;
+    html+=`<tr class="g${n%2?" alt":""}${g.wd?" wd":""}" style="cursor:default"><td class="sticky1 idx">${r.rank===null?"—":r.rank}</td><td class="sticky2 name">${esc(g.name)}${g.wd?'<span class="tag">WD</span>':""}</td>${heat(r,"pRating",fmt(r.rating,1),"rate")}`;
+    M.forEach((m,j)=>{
+      const sp=g.sim[j]??null, bo=g.book[j]??null, bp=bookProb(bo,m.fmt), d=simVal(r,"diff:"+j);
+      let dcell='<td class="gs">—</td>';
+      if(d!==null){
+        const c=gradientColor(0.5+0.5*Math.max(-1,Math.min(1,d/cap[j]))), dr=(d*100).toFixed(1);
+        const txt=(Number(dr)===0?"0.0":(d>0?"+":"")+dr)+(diffMode==="pct"?"%":"");
+        dcell=`<td class="fp" style="background:${c.bg};color:${c.text}">${txt}</td>`;
+      }
+      html+=`<td class="gs">${sp===null?"—":pct(sp)}</td><td class="dim">${oddsText(bo,m.fmt)}</td><td class="dim">${bp===null?"—":pct(bp)}</td>${dcell}`;
+    });
+    html+="</tr>";
+  });
+  $("simRows").innerHTML=html;
+}
+
+function render(){ if(tab==="sim") renderSim(); else renderModel(); }
+function recalc(){ compute(); render(); updateWTotals(); }
+
+// ---------- weights panel ----------
+function buildWeights(){
+  const grid=$("wgrid"); grid.innerHTML=""; const groups={};
+  D.stats.forEach((s,i)=>{ (groups[s.group]=groups[s.group]||[]).push(i); });
+  Object.keys(groups).forEach(gn=>{
+    const card=document.createElement("div"); card.className="wcard"; card.style.setProperty("--gc",GCOL[gn]);
+    const h=document.createElement("h4"); h.innerHTML=`<b>${esc(gn)}</b><span data-gt="${esc(gn)}"></span>`; card.appendChild(h);
+    groups[gn].forEach(i=>{
+      const row=document.createElement("div"); row.className="wrow";
+      row.innerHTML=`<span class="lab" title="${esc(D.stats[i].label)}">${esc(D.stats[i].label)}</span><input type="range" min="0" max="25" step="0.5" value="${W[i]}"><span class="val"></span>`;
+      const inp=row.querySelector("input"), v=row.querySelector(".val");
+      inp.oninput=()=>{ W[i]=parseFloat(inp.value); saveW(); recalc(); };
+      row._sync=()=>{ inp.value=W[i]; v.textContent=fmtShare(i); };
+      card.appendChild(row);
+    });
+    grid.appendChild(card);
+  });
+  updateWTotals();
+}
+function fmtShare(i){ const t=W.reduce((a,b)=>a+b,0); return t?(W[i]/t*100).toFixed(1)+"%":"0%"; }
+function updateWTotals(){
+  const t=W.reduce((a,b)=>a+b,0);
+  $("wtotal").textContent="Total weight: "+t.toFixed(1)+" → scaled to 100%";
+  document.querySelectorAll(".wrow").forEach(r=>r._sync&&r._sync());
+  const groups={}; D.stats.forEach((s,i)=>{ groups[s.group]=(groups[s.group]||0)+W[i]; });
+  document.querySelectorAll("[data-gt]").forEach(el=>{ el.textContent=t?(groups[el.dataset.gt]/t*100).toFixed(1)+"%":"0%"; });
+}
+
+// ---------- export ----------
+function csvCell(v){ v=String(v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function exportCsv(){
+  const list=rows.slice().sort((a,b)=>b.fpts-a.fpts||a.g.name.localeCompare(b.g.name));
+  const missing=list.filter(r=>!r.g.rg_id);
+  if(missing.length){
+    if(!confirm(missing.length+" of "+list.length+" golfers have no RG ID in this data and will be exported with a blank rg_id. Export anyway?")) return;
+  }
+  const lines=["rg_id,name,fpts"];
+  list.forEach(r=>lines.push([r.g.rg_id||"",r.g.name,(r.g.wd?0:r.fpts).toFixed(2)].map(csvCell).join(",")));
+  const blob=new Blob([lines.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="golf_"+(D.slug||"model")+".csv"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// ---------- tabs + wiring ----------
+const TABS={model:["tabModel","modelView"],sim:["tabSim","simView"],instr:["tabInstr","instrView"],gloss:["tabGloss","glossView"]};
+function setTab(t){
+  if(t==="sim"&&!(D&&D.markets&&D.markets.length)) t="model";
+  if(!TABS[t]) t="model";
+  tab=t;
+  Object.keys(TABS).forEach(k=>{ $(TABS[k][0]).classList.toggle("active",k===t); $(TABS[k][1]).classList.toggle("hidden",k!==t); });
+  $("toolbar").classList.toggle("hidden",t==="instr"||t==="gloss");
+  document.querySelector(".modelOnly").style.display=t==="model"?"contents":"none";
+  if(t!=="model") $("wpanel").classList.remove("open");
+  if(D&&(t==="model"||t==="sim")) render();
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+$("search").oninput=e=>{ search=e.target.value; if(D) render(); };
+$("wBtn").onclick=()=>$("wpanel").classList.toggle("open");
+$("stBtn").onclick=e=>{ e.stopPropagation(); $("spanel").classList.toggle("open"); };
+document.addEventListener("click",e=>{ if(!$("spanel").contains(e.target)&&e.target!==$("stBtn")) $("spanel").classList.remove("open"); });
+function buildStatsPanel(){
+  const sp=$("spanel"); sp.innerHTML='<div class="acts"><button class="btn" id="stAll">All</button><button class="btn" id="stNone">None</button></div>';
+  const groups=[]; D.stats.forEach((st,i)=>{ let g=groups.find(x=>x.n===st.group); if(!g){ g={n:st.group,idx:[]}; groups.push(g); } g.idx.push(i); });
+  groups.forEach(g=>{
+    const lab=document.createElement("label"), cb=document.createElement("input"); cb.type="checkbox"; cb.checked=true; cb.dataset.g=g.n;
+    cb.onchange=()=>{ g.idx.forEach(i=>cb.checked?shownStats.add(i):shownStats.delete(i)); render(); };
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(" "+g.n+" ("+g.idx.length+")")); sp.appendChild(lab);
+  });
+  $("stAll").onclick=()=>{ D.stats.forEach((_,i)=>shownStats.add(i)); sp.querySelectorAll("input").forEach(c=>c.checked=true); render(); };
+  $("stNone").onclick=()=>{ shownStats.clear(); sp.querySelectorAll("input").forEach(c=>c.checked=false); render(); };
+}
+$("resetBtn").onclick=()=>{ W=W0.slice(); try{ localStorage.removeItem("rggm-w-"+(D.slug||KEY)); }catch(e){} recalc(); };
+$("exportBtn").onclick=exportCsv;
+$("scaleSel").onchange=e=>{ scaleMode=e.target.value; $("scaleBox").style.display=scaleMode==="scaled"?"inline-flex":"none"; recalc(); };
+$("floor").oninput=e=>{ floorV=parseFloat(e.target.value)||0; recalc(); };
+$("ceil").oninput=e=>{ ceilV=parseFloat(e.target.value)||0; recalc(); };
+$("themeBtn").onclick=()=>{ const d=!document.body.classList.contains("dark"); document.body.classList.toggle("dark",d); $("themeBtn").textContent=d?"☀️":"🌙"; };
+$("diffMode").onchange=e=>{ diffMode=e.target.value; if(D&&tab==="sim") render(); };
+$("clearAdj").onclick=()=>{ ADJ={}; saveAdj(); recalc(); };
+
+// model table: sorting, row details, manual adjustment
+$("modelHead").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-k]"); if(!th||th.dataset.ns) return;
+  const k=th.dataset.k; if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=(k==="name"||k==="rank")?1:-1; }
+  render();
+});
+$("simHead").addEventListener("click",e=>{
+  const th=e.target.closest("th[data-k]"); if(!th) return;
+  const k=th.dataset.k; if(simSort.key===k) simSort.dir*=-1; else { simSort={key:k,dir:(k==="name")?1:-1}; }
+  render();
+});
+$("bodyRows").addEventListener("click",e=>{
+  if(e.target.closest("input.adj")) return;
+  const tr=e.target.closest("tr.g"); if(!tr) return;
+  const i=+tr.dataset.i; if(openRows.has(i)) openRows.delete(i); else openRows.add(i);
+  render();
+});
+$("bodyRows").addEventListener("change",e=>{
+  const inp=e.target.closest("input.adj"); if(!inp) return;
+  const g=D.golfers[+inp.dataset.i]; let v=parseFloat(inp.value);
+  if(isNaN(v)||v===0) delete ADJ[gk(g)]; else ADJ[gk(g)]=Math.max(-90,Math.min(500,v));
+  saveAdj(); recalc();
+});
+$("bodyRows").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.classList.contains("adj")) e.target.blur(); });
+
+// ---------- load ----------
+const qp=new URLSearchParams(location.search);
+KEY=(qp.get("k")||"").trim();
+if(HEAT[qp.get("heat")]) STOPS=HEAT[qp.get("heat")];
+function fail(msg){ $("eventName").textContent=""; $("bodyRows").innerHTML='<tr><td colspan="13" class="fail">'+msg+'</td></tr>'; }
+(/^[A-Za-z0-9]{16,64}$/.test(KEY)
+  ? fetch("d/"+KEY+".json?v="+Date.now()).then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+  : Promise.reject(new Error("nokey"))
+).then(d=>{
+  D=normalize(d); W0=d.stats.map(s=>s.w); W=W0.slice(); loadW();
+  [...new Set(D.stats.map(s=>s.group))].forEach((g,i)=>GCOL[g]=GROUP_COLORS[i%GROUP_COLORS.length]);
+  D.stats.forEach((_,i)=>shownStats.add(i));
+  floorV=d.scale&&d.scale.floor!=null?d.scale.floor:11; ceilV=d.scale&&d.scale.ceiling!=null?d.scale.ceiling:50.5;
+  $("floor").value=floorV; $("ceil").value=ceilV;
+  $("eventName").textContent=d.event||"";
+  document.title="Noto's Customizable PGA DFS Model"+(d.event?" – "+d.event:"");
+  if(d.updated){ const t=new Date(d.updated); if(!isNaN(t)) $("updated").textContent="Updated "+t.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/New_York",timeZoneName:"short"}); }
+  loadAdj(); buildMarketZ(); compute();
+  if(!D.markets.length) $("tabSim").classList.add("hidden");
+  buildStatsPanel(); buildWeights();
+  const t0=qp.get("tab"); setTab({sim:"sim",instructions:"instr",glossary:"gloss"}[t0]||"model");
+  const miss=d.golfers.filter(g=>!g.rg_id).length;
+  if(miss){ const w=$("warn"); w.style.display="block"; w.textContent=miss+" of "+d.golfers.length+" golfers have no RG ID, so the export will have blank rg_id values for them."; }
+}).catch(e=>{ fail(e.message==="nokey"?"This link is incomplete. Please use the full link from the RotoGrinders page.":"Could not load this week's data ("+e.message+"). Please check that you are using the latest link."); console.error(e); });
+</script>
+</body>
+</html>
